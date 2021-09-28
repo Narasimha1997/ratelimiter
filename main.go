@@ -7,9 +7,9 @@ import (
 )
 
 func main() {
-	limiter := core.NewLimiter(10, time.Duration(10*time.Second))
+	limiter := core.NewLimiter(100, time.Duration(1*time.Second))
 	for {
-		println(limiter.ShouldAllow(4))
-		time.Sleep(3 * time.Second)
+		println(limiter.ShouldAllow(1))
+		time.Sleep(2 * time.Millisecond)
 	}
 }
