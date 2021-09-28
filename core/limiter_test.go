@@ -8,7 +8,7 @@ import (
 
 func TestLimiterAccuracy(t *testing.T) {
 
-	nRuns := 60
+	nRuns := 20
 	var count uint64 = 0
 
 	// Time duration of the window.
@@ -24,28 +24,30 @@ func TestLimiterAccuracy(t *testing.T) {
 	var allowanceRange uint64 = 3
 
 	// will be set to true once the go routine completes all `nRuns`
-	hasFinished := false
 
-	rateLimiterRoutine := func() {
-		limiter := NewLimiter(limit, duration)
-		for i := 0; i < (nRuns * 500); i++ {
+	limiter := NewLimiter(limit, duration)
+
+	for i := 0; i < nRuns; i++ {
+		count = 0
+		nTicks := 0
+		for range time.Tick(time.Millisecond * 2) {
+
 			if limiter.ShouldAllow(1) {
 				count++
 			}
 
-			time.Sleep(2 * time.Millisecond)
+			nTicks++
+
+			if nTicks%500 == 0 {
+				break
+			}
 		}
 
-		hasFinished = true
-	}
-
-	go rateLimiterRoutine()
-
-	fmt.Printf("Running accuracy measurement check for %d trials", nRuns)
-
-	for !hasFinished {
-		time.Sleep(duration)
-		if (limit-allowanceRange) <= count && count >= (limit+allowanceRange) {
+		if (limit-allowanceRange) <= count && count <= (limit+allowanceRange) {
+			fmt.Printf(
+				"Iteration %d, Allowed tasks: %d, passed rate limiting accuracy test.\n",
+				i+1, count,
+			)
 			count = 0
 		} else {
 			t.Fatalf(
@@ -54,4 +56,6 @@ func TestLimiterAccuracy(t *testing.T) {
 			)
 		}
 	}
+
+	fmt.Printf("Running accuracy measurement check for %d trials", nRuns)
 }
