@@ -39,8 +39,8 @@ func (l *Limiter) progressiveWindowSlider() {
 		time.Sleep(toSleepDuration)
 		l.lock.Lock()
 		// make current as previous and create a new current window
-		l.previous = l.current
-		l.current = NewWindow(0, time.Now())
+		l.previous.setStateFrom(l.current)
+		l.current.resetToTime(time.Now())
 		l.lock.Unlock()
 	}
 }
