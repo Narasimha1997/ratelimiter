@@ -45,7 +45,7 @@ func TestLimiterAccuracy(t *testing.T) {
 
 	for !hasFinished {
 		time.Sleep(duration)
-		if (limit-allowanceRange) <= count && count <= (limit+allowanceRange) {
+		if (limit-allowanceRange) <= count && count >= (limit+allowanceRange) {
 			count = 0
 		} else {
 			t.Fatalf(
