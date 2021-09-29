@@ -108,7 +108,7 @@ func TestAttributeBasedLimiterAccuracy(t *testing.T) {
 	duration := 1 * time.Second
 
 	// 10 samples will be executed.
-	nRuns := 10
+	nRuns := 5
 
 	// test with accuracy +/- 3, modify this variable to
 	// test accuracy for various error offsets, 0 is the most

@@ -9,7 +9,7 @@ import (
 
 func TestLimiterAccuracy(t *testing.T) {
 
-	nRuns := 20
+	nRuns := 10
 	var count uint64 = 0
 
 	// Time duration of the window.
@@ -60,7 +60,7 @@ func TestLimiterAccuracy(t *testing.T) {
 }
 
 func TestConcurrentLimiterAccuracy(t *testing.T) {
-	nRuns := 20
+	nRuns := 10
 	duration := time.Second * 1
 
 	// 100 tasks must be allowed to execute
