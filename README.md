@@ -185,7 +185,7 @@ Iteration 5, Allowed tasks: 123, passed rate limiting accuracy test.
 ```
 
 #### Notes on test:
-The testing code produces 500 requests/sec with `2ms` precision time gap between each request. The accuracy of this `2ms` time tick generation can differ from platform to platform, even a small difference of 500 micorseconds can add up together and give more time for test to run in the end because of clock drift, as a result the error offset +/- 3 might not always work. On Windows for example, the `2ms` precision time ticks can be inconsistent because the windows scheduler wakes up every `15ms` causing a drift in the clock time, however Linux based distros has presise timers that allow us to obtain precise `2ms` time tikcs. Because of this reason, the github actions for this repository is made to run only on Ubuntu linux distro.
+The testing code produces 500 requests/sec with `2ms` precision time gap between each request. The accuracy of this `2ms` time tick generation can differ from platform to platform, even a small difference of 500 micorseconds can add up together and give more time for test to run in the end because of clock drift, as a result the error offset +/- 3 might not always work. On Windows for example, the `2ms` precision time ticks can be inconsistent because the windows scheduler wakes up every `15ms` causing a drift in the clock time, however Linux based distros have precise timers that allow us to obtain precise `2ms` time tikcs.
 
 ### Contributing
 Feel free to raise issues, make pull requests or suggest new features.
