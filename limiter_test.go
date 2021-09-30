@@ -27,13 +27,19 @@ func TestLimiterAccuracy(t *testing.T) {
 	// will be set to true once the go routine completes all `nRuns`
 
 	limiter := NewLimiter(limit, duration)
+	defer limiter.Kill()
 
 	for i := 0; i < nRuns; i++ {
 		count = 0
 		nTicks := 0
 		for range time.Tick(time.Millisecond * 2) {
 
-			if limiter.ShouldAllow(1) {
+			canAllow, err := limiter.ShouldAllow(1)
+			if err != nil {
+				t.Fatalf("%v", err)
+			}
+
+			if canAllow {
 				count++
 			}
 
@@ -69,6 +75,7 @@ func TestConcurrentLimiterAccuracy(t *testing.T) {
 
 	// create a limiter, that is shared across go routines:
 	sharedLimiter := NewLimiter(limit, duration)
+	defer sharedLimiter.Kill()
 
 	// launch N go-routines:
 	nRoutines := 4
@@ -94,7 +101,12 @@ func TestConcurrentLimiterAccuracy(t *testing.T) {
 		// time.Tick cannot be stopped, we are using it because
 		// this is a test code.
 		for range time.Tick(2 * time.Millisecond) {
-			if sharedLimiter.ShouldAllow(1) {
+			canAllow, err := sharedLimiter.ShouldAllow(1)
+			if err != nil {
+				break
+			}
+
+			if canAllow {
 				counterSlice[idx]++
 			}
 
@@ -133,5 +145,30 @@ func TestConcurrentLimiterAccuracy(t *testing.T) {
 				allowanceRange, count,
 			)
 		}
+	}
+}
+
+func TestLimiterCleanup(t *testing.T) {
+	var limit uint64 = 10
+	var size time.Duration = 5 * time.Second
+
+	limiter := NewLimiter(limit, size)
+
+	// call allow check on limiter:
+	_, err := limiter.ShouldAllow(1)
+	if err != nil {
+		t.Fatalf("Error when calling ShouldAllow() on active limiter, Error: %v", err)
+	}
+
+	// kill the limiter:
+	err = limiter.Kill()
+	if err != nil {
+		t.Fatalf("Failed to kill an active limiter, Error: %v", err)
+	}
+
+	// call ShouldAllow() on inactive limiter, this should throw an error
+	_, err = limiter.ShouldAllow(4)
+	if err == nil {
+		t.Fatalf("Calling ShouldAllow() on inactive limiter did not throw any errors.")
 	}
 }

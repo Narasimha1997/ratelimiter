@@ -41,7 +41,7 @@ func (a *AttributeBasedLimiter) ShouldAllow(key *string, n uint64) (bool, error)
 
 	limiter, ok := a.attributeMap[*key]
 	if ok {
-		return limiter.ShouldAllow(n), nil
+		return limiter.ShouldAllow(n)
 	}
 
 	return false, fmt.Errorf("key %s not found", *key)
@@ -52,7 +52,11 @@ func (a *AttributeBasedLimiter) DeleteKey(key *string) error {
 	a.m.Lock()
 	defer a.m.Unlock()
 
-	if _, ok := a.attributeMap[*key]; ok {
+	if limiter, ok := a.attributeMap[*key]; ok {
+		err := limiter.Kill()
+		if err != nil {
+			return err
+		}
 		delete(a.attributeMap, *key)
 		return nil
 	}
