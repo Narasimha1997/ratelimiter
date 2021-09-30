@@ -161,9 +161,13 @@ func TestLimiterCleanup(t *testing.T) {
 	}
 
 	// kill the limiter:
-	err = limiter.Kill()
-	if err != nil {
+	if err = limiter.Kill(); err != nil {
 		t.Fatalf("Failed to kill an active limiter, Error: %v", err)
+	}
+
+	// try to call kill again on already killed limiter:
+	if err = limiter.Kill(); err == nil {
+		t.Fatalf("Failed to throw error when Kill() was called on the same limiter twice.")
 	}
 
 	// call ShouldAllow() on inactive limiter, this should throw an error

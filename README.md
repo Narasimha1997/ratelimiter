@@ -117,12 +117,12 @@ func AttributeRateLimiter() {
 	/*
 		Other functions:
 			1. HasKey: to check if the attribute already has given key
-			   call: HasKey(key *string) function.
+			   call: HasKey(key string) function.
 			   Example: limiter.HasKey(&article_id[0])
 			   Returns a bool, true if exists, false otherwise
 
 			2. DeleteKey: to remove the key from attribute map
-			   call: DeleteKey(key *string) function.
+			   call: DeleteKey(key string) function.
 			   Example: limiter.DeleteKey(&article_id[1])
 			   Returns an error, if key was not in the map.
 	*/
@@ -187,6 +187,25 @@ Iteration 5, Allowed tasks: 100, passed rate limiting accuracy test.
 Iteration 5, Allowed tasks: 123, passed rate limiting accuracy test.
 --- PASS: TestAttributeBasedLimiterAccuracy (5.00s)
 ```
+
+**Code coverage**:
+To generate code coverage report, execute:
+```
+go test -coverprofile=c.out
+```
+
+This should print the following after running all the tests.
+```
+coverage: 98.6% of statements
+ok      github.com/Narasimha1997/ratelimiter    25.099s
+```
+
+You can also save the results as HTML for more detailed code view of the coverage.
+```
+go tool cover -html=c.out -o coverage.html
+```
+
+This will generate a file called `coverage.html`. The `coverage.html` is provided in the repo which is pre-generated.
 
 #### Notes on test:
 The testing code produces 500 requests/sec with `2ms` precision time gap between each request. The accuracy of this `2ms` time tick generation can differ from platform to platform, even a small difference of 500 micorseconds can add up together and give more time for test to run in the end because of clock drift, as a result the error offset +/- 3 might not always work. On Windows for example, the `2ms` precision time ticks can be inconsistent because the windows scheduler wakes up every `15ms` causing a drift in the clock time, however Linux based distros have precise timers that allow us to obtain precise `2ms` time tikcs.

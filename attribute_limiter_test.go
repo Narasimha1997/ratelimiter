@@ -20,14 +20,14 @@ func TestAttributeMapGetSetDelete(t *testing.T) {
 	testKey2 := "/api/getArticle?id=20"
 
 	// check keys:
-	if attributeLimiter.HasKey(&testKey1) {
+	if attributeLimiter.HasKey(testKey1) {
 		t.Fatalf(
 			"AttributeBasedLimiter.HasKey() failed, returned true for non-existing key %s",
 			testKey1,
 		)
 	}
 
-	if attributeLimiter.HasKey(&testKey2) {
+	if attributeLimiter.HasKey(testKey2) {
 		t.Fatalf(
 			"AttributeBasedLimiter.HasKey() failed, returned true for non-existing key %s",
 			testKey2,
@@ -35,29 +35,37 @@ func TestAttributeMapGetSetDelete(t *testing.T) {
 	}
 
 	// create key:
-	if err := attributeLimiter.CreateNewKey(&testKey1, uint64(limit), duration); err != nil {
+	if err := attributeLimiter.CreateNewKey(testKey1, uint64(limit), duration); err != nil {
 		t.Fatalf(
 			"AttributeBasedLimiter.CreateNewKey() failed, returned error on creating key %s, Error: %v\n",
 			testKey1, err,
 		)
 	}
 
-	if err := attributeLimiter.CreateNewKey(&testKey2, uint64(limit), duration); err != nil {
+	if err := attributeLimiter.CreateNewKey(testKey2, uint64(limit), duration); err != nil {
 		t.Fatalf(
 			"AttributeBasedLimiter.CreateNewKey() failed, returned error on creating key %s, Error: %v\n",
 			testKey2, err,
 		)
 	}
 
+	// create an already existing key:
+	if err := attributeLimiter.CreateNewKey(testKey2, uint64(limit), duration); err == nil {
+		t.Fatalf(
+			"AttributeBasedLimiter.CreateNewKey() failed, did not return error when creating existing key %s\n",
+			testKey2,
+		)
+	}
+
 	// check existing keys:
-	if !attributeLimiter.HasKey(&testKey1) {
+	if !attributeLimiter.HasKey(testKey1) {
 		t.Fatalf(
 			"AttributeBasedLimiter.HasKey() failed, returned false for existing key %s",
 			testKey1,
 		)
 	}
 
-	if !attributeLimiter.HasKey(&testKey1) {
+	if !attributeLimiter.HasKey(testKey1) {
 		t.Fatalf(
 			"AttributeBasedLimiter.HasKey() failed, returned false for existing key %s",
 			testKey2,
@@ -65,14 +73,14 @@ func TestAttributeMapGetSetDelete(t *testing.T) {
 	}
 
 	// remove key
-	if err := attributeLimiter.DeleteKey(&testKey1); err != nil {
+	if err := attributeLimiter.DeleteKey(testKey1); err != nil {
 		t.Fatalf(
 			"AttributeBasedLimiter.DeleteKey() failed, returned error when removing existing key %s, Error: %v",
 			testKey1, err,
 		)
 	}
 
-	if err := attributeLimiter.DeleteKey(&testKey2); err != nil {
+	if err := attributeLimiter.DeleteKey(testKey2); err != nil {
 		t.Fatalf(
 			"AttributeBasedLimiter.DeleteKey() failed, returned error when removing existing key %s, Error: %v",
 			testKey2, err,
@@ -80,17 +88,31 @@ func TestAttributeMapGetSetDelete(t *testing.T) {
 	}
 
 	// check keys again:
-	if attributeLimiter.HasKey(&testKey1) {
+	if attributeLimiter.HasKey(testKey1) {
 		t.Fatalf(
 			"AttributeBasedLimiter.HasKey() failed, returned true for non-existing key %s",
 			testKey1,
 		)
 	}
 
-	if attributeLimiter.HasKey(&testKey2) {
+	if attributeLimiter.HasKey(testKey2) {
 		t.Fatalf(
 			"AttributeBasedLimiter.HasKey() failed, returned true for non-existing key %s",
 			testKey2,
+		)
+	}
+
+	// check ShouldAllow on non-existing key:
+	if _, err := attributeLimiter.ShouldAllow("noKey", 5); err == nil {
+		t.Fatalf(
+			"AttributeBasedLimiter.ShouldAllow() failed, did not return error when checking non-existing key.",
+		)
+	}
+
+	// Remove the non-existing key:
+	if err := attributeLimiter.DeleteKey("noKey"); err == nil {
+		t.Fatalf(
+			"AttributeBasedLimiter.DeleteKey failed, did not return error when deleting non-existing key.",
 		)
 	}
 }
@@ -118,7 +140,7 @@ func TestAttributeBasedLimiterAccuracy(t *testing.T) {
 	sharedLimiter := NewAttributeBasedLimiter()
 
 	for idx, key := range keys {
-		err := sharedLimiter.CreateNewKey(&key, limits[idx], duration)
+		err := sharedLimiter.CreateNewKey(key, limits[idx], duration)
 		if err != nil {
 			t.Fatalf("%v", err)
 		}
@@ -129,7 +151,7 @@ func TestAttributeBasedLimiterAccuracy(t *testing.T) {
 		j := 0
 		counters[idx] = 0
 		for range time.Tick(2 * time.Millisecond) {
-			allowed, err := sharedLimiter.ShouldAllow(&key, 1)
+			allowed, err := sharedLimiter.ShouldAllow(key, 1)
 			if err != nil {
 				break
 			}

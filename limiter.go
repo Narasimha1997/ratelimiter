@@ -20,11 +20,12 @@ type Limiter struct {
 
 func (l *Limiter) ShouldAllow(n uint64) (bool, error) {
 
+	l.lock.Lock()
+	defer l.lock.Unlock()
+
 	if l.killed {
 		return false, fmt.Errorf("function ShouldAllow called on an inactive instance")
 	}
-
-	l.lock.Lock()
 
 	currentTime := time.Now()
 	currentWindowBoundary := currentTime.Sub(l.current.getStartTime())
@@ -33,7 +34,6 @@ func (l *Limiter) ShouldAllow(n uint64) (bool, error) {
 
 	currentSlidingRequests := uint64(w*float64(l.previous.count)) + l.current.count
 
-	defer l.lock.Unlock()
 	if currentSlidingRequests+n > l.limit {
 		return false, nil
 	}

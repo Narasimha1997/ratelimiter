@@ -75,26 +75,26 @@ func AttributeRateLimiter() {
 	article_ids := []string{"article_id=10", "article_id=11"}
 
 	// for article_id=10, allow 10 tasks/items per every second
-	err := limiter.CreateNewKey(&article_ids[0], 10, 5*time.Second)
+	err := limiter.CreateNewKey(article_ids[0], 10, 5*time.Second)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	// for article_id=11, allow 100 tasks/items per every 6 minutes
-	err = limiter.CreateNewKey(&article_ids[1], 100, 6*time.Minute)
+	err = limiter.CreateNewKey(article_ids[1], 100, 6*time.Minute)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	// rates can be checked by passing key and N as parameters
 	// Can I make 8 requests to article_id=10 during this time window?
 
-	// ShouldAllow(key *string, N uint64) returns (bool, error)
+	// ShouldAllow(key string, N uint64) returns (bool, error)
 	// the bool is true/false, true if it can be allowed
 	// false if it cant be allowed.
 	// error if key is not found.
 
-	fmt.Println(limiter.ShouldAllow(&article_ids[0], 8))
+	fmt.Println(limiter.ShouldAllow(article_ids[0], 8))
 	// Can I make 104 requests to article_id=11 during this time window?
-	fmt.Println(limiter.ShouldAllow(&article_ids[0], 104))
+	fmt.Println(limiter.ShouldAllow(article_ids[0], 104))
 
 	/*
 		Other functions:
