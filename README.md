@@ -20,14 +20,6 @@ There are two types of rate-limiters used.
 The generic rate-limiter instance can be created if you want to have a single rate-limiter with single configuration for everything. The generic rate-limiter can be created by calling `NewLimiter()` function and by passing the `limit` and `size` as parameters. Example:
 
 ```go
-import (
-	"fmt"
-	"log"
-	"time"
-
-	"github.com/Narasimha1997/ratelimiter"
-)
-
 func GenericRateLimiter() {
 	/* create an instance of Limiter.
 	format: NewLimiter(limit uint64, size time.Duration),
@@ -43,12 +35,24 @@ func GenericRateLimiter() {
 	)
 
 	/*
-		the limiter provides ShouldAllow(N uint64) function which
-		returns true/false if N items/tasks can be allowed during current
-		time interval
+		Cleaning up the limiter: Once the limiter is no longer required,
+		the underlying goroutines and resources used by the limiter can be cleaned up.
+		This can be done using:
+			limiter.Kill(),
+		Returns an error if the limiter is already being killed.
 	*/
 
-	// ShouldAllow(N uint64) -> returns true/false
+	defer limiter.Kill()
+
+	/*
+		the limiter provides ShouldAllow(N uint64) function which
+		returns true/false if N items/tasks can be allowed during current
+		time interval.
+
+		An error is returned if the limiter is already killed.
+	*/
+
+	// ShouldAllow(N uint64) -> returns bool, error
 
 	// should return true
 	fmt.Println(limiter.ShouldAllow(60))

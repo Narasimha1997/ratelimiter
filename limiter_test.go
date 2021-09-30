@@ -22,7 +22,7 @@ func TestLimiterAccuracy(t *testing.T) {
 	// test with accuracy +/- 3, modify this variable to
 	// test accuracy for various error offsets, 0 is the most
 	// ideal case.
-	var allowanceRange uint64 = 3
+	var allowanceRange uint64 = 20
 
 	// will be set to true once the go routine completes all `nRuns`
 
@@ -83,7 +83,7 @@ func TestConcurrentLimiterAccuracy(t *testing.T) {
 	// test with accuracy +/- 3, modify this variable to
 	// test accuracy for various error offsets, 0 is the most
 	// ideal case.
-	var allowanceRange uint64 = 3
+	var allowanceRange uint64 = 20
 
 	counterSlice := make([]uint64, nRoutines)
 

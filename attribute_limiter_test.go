@@ -113,7 +113,7 @@ func TestAttributeBasedLimiterAccuracy(t *testing.T) {
 	// test with accuracy +/- 3, modify this variable to
 	// test accuracy for various error offsets, 0 is the most
 	// ideal case.
-	var allowanceRange uint64 = 3
+	var allowanceRange uint64 = 20
 
 	sharedLimiter := NewAttributeBasedLimiter()
 
