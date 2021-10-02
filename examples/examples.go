@@ -113,12 +113,13 @@ func AttributeRateLimiter() {
 
 func TestLoop() {
 	limiter := ratelimiter.NewAttributeBasedLimiter(false)
-	limiter.CreateNewKey("test", 2, time.Second*5)
+	limiter.CreateNewKey("test", 10, time.Second*5)
 
 	counter := 0
 	lockVal := sync.Mutex{}
 
 	go (func() {
+
 		for {
 			allowed, _ := limiter.ShouldAllow("test", 1)
 			if allowed {
@@ -127,7 +128,8 @@ func TestLoop() {
 				lockVal.Unlock()
 			}
 
-			time.Sleep(1000 * time.Millisecond)
+			time.Sleep(300 * time.Millisecond)
+
 		}
 	})()
 

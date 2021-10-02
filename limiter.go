@@ -80,8 +80,8 @@ func (l *DefaultLimiter) Kill() error {
 }
 
 func NewDefaultLimiter(limit uint64, size time.Duration) *DefaultLimiter {
-	previous := NewWindow(0, time.Now())
-	current := NewWindow(0, time.Now())
+	previous := NewWindow(0, time.Unix(0, 0))
+	current := NewWindow(0, time.Unix(0, 0))
 
 	childCtx, cancelFn := context.WithCancel(context.Background())
 
@@ -180,8 +180,7 @@ func (s *SyncLimiter) Kill() error {
 
 func NewSyncLimiter(limit uint64, size time.Duration) *SyncLimiter {
 
-	currentTime := time.Now()
-	current := NewWindow(0, currentTime)
+	current := NewWindow(0, time.Unix(0, 0))
 	previous := NewWindow(0, time.Unix(0, 0))
 
 	return &SyncLimiter{
