@@ -12,7 +12,7 @@ func TestAttributeMapGetSetDelete(t *testing.T) {
 	duration := 1 * time.Second
 	limit := 100
 
-	attributeLimiter := NewAttributeBasedLimiter()
+	attributeLimiter := NewAttributeBasedLimiter(true)
 
 	// create a new key attribute:
 	// Example scenario, the rate-limiter
@@ -135,9 +135,9 @@ func TestAttributeBasedLimiterAccuracy(t *testing.T) {
 	// test with accuracy +/- 3, modify this variable to
 	// test accuracy for various error offsets, 0 is the most
 	// ideal case.
-	var allowanceRange uint64 = 20
+	var allowanceRange uint64 = 15
 
-	sharedLimiter := NewAttributeBasedLimiter()
+	sharedLimiter := NewAttributeBasedLimiter(true)
 
 	for idx, key := range keys {
 		err := sharedLimiter.CreateNewKey(key, limits[idx], duration)

@@ -26,7 +26,7 @@ func TestLimiterAccuracy(t *testing.T) {
 
 	// will be set to true once the go routine completes all `nRuns`
 
-	limiter := NewLimiter(limit, duration)
+	limiter := NewDefaultLimiter(limit, duration)
 	defer limiter.Kill()
 
 	for i := 0; i < nRuns; i++ {
@@ -74,7 +74,7 @@ func TestConcurrentLimiterAccuracy(t *testing.T) {
 	var limit uint64 = 100
 
 	// create a limiter, that is shared across go routines:
-	sharedLimiter := NewLimiter(limit, duration)
+	sharedLimiter := NewDefaultLimiter(limit, duration)
 	defer sharedLimiter.Kill()
 
 	// launch N go-routines:
@@ -152,7 +152,7 @@ func TestLimiterCleanup(t *testing.T) {
 	var limit uint64 = 10
 	var size time.Duration = 5 * time.Second
 
-	limiter := NewLimiter(limit, size)
+	limiter := NewDefaultLimiter(limit, size)
 
 	// call allow check on limiter:
 	_, err := limiter.ShouldAllow(1)

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/Narasimha1997/ratelimiter"
@@ -18,7 +19,7 @@ func GenericRateLimiter() {
 		To summarize, if limit = 100 and duration = 5s, then allow 100 items per 5 seconds
 	*/
 
-	limiter := ratelimiter.NewLimiter(
+	limiter := ratelimiter.NewSyncLimiter(
 		100, time.Second*5,
 	)
 
@@ -49,7 +50,7 @@ func GenericRateLimiter() {
 	// sleep for some time
 	time.Sleep(5 * time.Second)
 	// should return true, because the previous window has been slided over
-	fmt.Println(limiter.ShouldAllow(20))
+	fmt.Println(limiter.ShouldAllow(80))
 }
 
 func AttributeRateLimiter() {
@@ -60,7 +61,7 @@ func AttributeRateLimiter() {
 		by a key. Calling NewAttributeBasedLimiter() will create an empty
 		rate limiter with no entries.
 	*/
-	limiter := ratelimiter.NewAttributeBasedLimiter()
+	limiter := ratelimiter.NewAttributeBasedLimiter(true)
 
 	/*
 		Now we are adding a new entry to the limiter, we pass:
@@ -110,10 +111,42 @@ func AttributeRateLimiter() {
 	*/
 }
 
+func TestLoop() {
+	limiter := ratelimiter.NewAttributeBasedLimiter(false)
+	limiter.CreateNewKey("test", 2, time.Second*5)
+
+	counter := 0
+	lockVal := sync.Mutex{}
+
+	go (func() {
+		for {
+			allowed, _ := limiter.ShouldAllow("test", 1)
+			if allowed {
+				lockVal.Lock()
+				counter++
+				lockVal.Unlock()
+			}
+
+			time.Sleep(1000 * time.Millisecond)
+		}
+	})()
+
+	for {
+		time.Sleep(time.Second * 5)
+		fmt.Println(counter)
+		lockVal.Lock()
+		counter = 0
+		lockVal.Unlock()
+	}
+}
+
 func main() {
 
 	fmt.Println("Generic rate limiter:")
 	GenericRateLimiter()
 	fmt.Println("Attribute based rate limiter:")
 	AttributeRateLimiter()
+
+	fmt.Println("Test loop with rate limited values:")
+	TestLoop()
 }
