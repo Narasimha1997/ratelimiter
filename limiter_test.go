@@ -148,35 +148,6 @@ func TestConcurrentLimiterAccuracy(t *testing.T) {
 	}
 }
 
-func TestLimiterCleanup(t *testing.T) {
-	var limit uint64 = 10
-	var size time.Duration = 5 * time.Second
-
-	limiter := NewDefaultLimiter(limit, size)
-
-	// call allow check on limiter:
-	_, err := limiter.ShouldAllow(1)
-	if err != nil {
-		t.Fatalf("Error when calling ShouldAllow() on active limiter, Error: %v", err)
-	}
-
-	// kill the limiter:
-	if err = limiter.Kill(); err != nil {
-		t.Fatalf("Failed to kill an active limiter, Error: %v", err)
-	}
-
-	// try to call kill again on already killed limiter:
-	if err = limiter.Kill(); err == nil {
-		t.Fatalf("Failed to throw error when Kill() was called on the same limiter twice.")
-	}
-
-	// call ShouldAllow() on inactive limiter, this should throw an error
-	_, err = limiter.ShouldAllow(4)
-	if err == nil {
-		t.Fatalf("Calling ShouldAllow() on inactive limiter did not throw any errors.")
-	}
-}
-
 func TestConcurrentSyncLimiter(t *testing.T) {
 	nRuns := 10
 	duration := time.Second * 1
@@ -253,7 +224,7 @@ func TestConcurrentSyncLimiter(t *testing.T) {
 			if (limit-allowanceRange) <= count && count <= (limit+allowanceRange) {
 				fmt.Printf(
 					"Iteration %d, Allowed tasks: %d, passed rate limiting accuracy test.\n",
-					(i+1)-2, count,
+					i, count,
 				)
 			} else {
 				t.Fatalf(
@@ -263,8 +234,64 @@ func TestConcurrentSyncLimiter(t *testing.T) {
 			}
 		}
 
-		if i == 1 {
-			isDry = false
-		}
+		isDry = false
+	}
+}
+
+func TestLimiterCleanup(t *testing.T) {
+	var limit uint64 = 10
+	var size time.Duration = 5 * time.Second
+
+	limiter := NewDefaultLimiter(limit, size)
+
+	// call allow check on limiter:
+	_, err := limiter.ShouldAllow(1)
+	if err != nil {
+		t.Fatalf("Error when calling ShouldAllow() on active limiter, Error: %v", err)
+	}
+
+	// kill the limiter:
+	if err = limiter.Kill(); err != nil {
+		t.Fatalf("Failed to kill an active limiter, Error: %v", err)
+	}
+
+	// try to call kill again on already killed limiter:
+	if err = limiter.Kill(); err == nil {
+		t.Fatalf("Failed to throw error when Kill() was called on the same limiter twice.")
+	}
+
+	// call ShouldAllow() on inactive limiter, this should throw an error
+	_, err = limiter.ShouldAllow(4)
+	if err == nil {
+		t.Fatalf("Calling ShouldAllow() on inactive limiter did not throw any errors.")
+	}
+}
+
+func TestSyncLimiterCleanup(t *testing.T) {
+	var limit uint64 = 10
+	var size time.Duration = 5 * time.Second
+
+	limiter := NewSyncLimiter(limit, size)
+
+	// call allow check on limiter:
+	_, err := limiter.ShouldAllow(1)
+	if err != nil {
+		t.Fatalf("Error when calling ShouldAllow() on active limiter, Error: %v", err)
+	}
+
+	// kill the limiter:
+	if err = limiter.Kill(); err != nil {
+		t.Fatalf("Failed to kill an active limiter, Error: %v", err)
+	}
+
+	// try to call kill again on already killed limiter:
+	if err = limiter.Kill(); err == nil {
+		t.Fatalf("Failed to throw error when Kill() was called on the same limiter twice.")
+	}
+
+	// call ShouldAllow() on inactive limiter, this should throw an error
+	_, err = limiter.ShouldAllow(4)
+	if err == nil {
+		t.Fatalf("Calling ShouldAllow() on inactive limiter did not throw any errors.")
 	}
 }

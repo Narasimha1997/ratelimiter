@@ -197,3 +197,90 @@ func TestAttributeBasedLimiterAccuracy(t *testing.T) {
 		}
 	}
 }
+
+func TestAttributeBasedLimiterAccuracySync(t *testing.T) {
+
+	// number of unique keys to be tested
+	keys := []string{"/api/getArticle?id=10", "/api/getArticle?id=20"}
+
+	// key1 has limit of 100 hits/sec and key2 has 123 hits/sec allowed.
+	limits := []uint64{100, 123}
+	counters := make([]uint64, len(keys))
+
+	// per second window
+	duration := 1 * time.Second
+
+	// 10 samples will be executed.
+	nRuns := 6
+
+	// test with accuracy +/- 3, modify this variable to
+	// test accuracy for various error offsets, 0 is the most
+	// ideal case.
+	var allowanceRange uint64 = 15
+
+	sharedLimiter := NewAttributeBasedLimiter(false)
+
+	isDry := true
+
+	for idx, key := range keys {
+		err := sharedLimiter.CreateNewKey(key, limits[idx], duration)
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+	}
+
+	routine := func(key string, idx int, wg *sync.WaitGroup) {
+		defer wg.Done()
+		j := 0
+		counters[idx] = 0
+		for range time.Tick(2 * time.Millisecond) {
+			allowed, err := sharedLimiter.ShouldAllow(key, 1)
+			if err != nil {
+				break
+			}
+
+			if allowed {
+				counters[idx]++
+			}
+
+			j++
+
+			if j%500 == 0 {
+				break
+			}
+		}
+	}
+
+	// run for nRuns:
+	for i := 0; i < nRuns; i++ {
+		wg := sync.WaitGroup{}
+		for idx, key := range keys {
+			wg.Add(1)
+			go routine(key, idx, &wg)
+		}
+
+		wg.Wait()
+
+		// loop over the keys and check rate-limit:
+		if !isDry {
+			for idx, count := range counters {
+				limit := limits[idx]
+
+				// check accuracy of counter
+				if (limit-allowanceRange) <= count && count <= (limit+allowanceRange) {
+					fmt.Printf(
+						"Iteration %d, Allowed tasks: %d, passed rate limiting accuracy test.\n",
+						i, count,
+					)
+				} else {
+					t.Fatalf(
+						"Accuracy test failed, expected results to be in +/- %d error range, but got %d",
+						allowanceRange, count,
+					)
+				}
+			}
+		}
+
+		isDry = false
+	}
+}

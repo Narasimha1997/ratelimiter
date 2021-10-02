@@ -8,6 +8,8 @@ import (
 )
 
 type Limiter interface {
+	// limiter interface is simple,
+	// Kill() and ShouldAllow() these are the functions you need.
 	Kill() error
 	ShouldAllow(n uint64) (bool, error)
 }
