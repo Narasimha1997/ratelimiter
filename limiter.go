@@ -7,13 +7,13 @@ import (
 	"time"
 )
 
+// Limiter is an interface that is implemented by DefaultLimiter and SyncLimiter
 type Limiter interface {
-	// limiter interface is simple,
-	// Kill() and ShouldAllow() these are the functions you need.
 	Kill() error
 	ShouldAllow(n uint64) (bool, error)
 }
 
+// DefaultLimiter maintains all the structures used for rate limting using a background goroutine.
 type DefaultLimiter struct {
 	previous      *Window
 	current       *Window
@@ -25,6 +25,14 @@ type DefaultLimiter struct {
 	cancelFn      func()
 }
 
+// Makes decison whether n tasks can be allowed or not.
+//
+// Parameters:
+//
+// 1. n: number of tasks to be processed, set this as 1 for a single task. (Example: An HTTP request)
+//
+// Returns (bool, error). (false, error) if limiter is inactive (or it is killed). Otherwise,
+// (true/false, nil) depending on whether n tasks can be allowed or not.
 func (l *DefaultLimiter) ShouldAllow(n uint64) (bool, error) {
 
 	l.lock.Lock()
@@ -67,6 +75,7 @@ func (l *DefaultLimiter) progressiveWindowSlider() {
 	}
 }
 
+// Kill the limiter, returns error if the limiter has been killed already.
 func (l *DefaultLimiter) Kill() error {
 
 	l.lock.Lock()
@@ -81,6 +90,13 @@ func (l *DefaultLimiter) Kill() error {
 	return nil
 }
 
+// Creates an instance of DefaultLimiter and returns it's pointer.
+//
+// Parameters:
+//
+// 1. limit: The number of tasks to be allowd
+//
+// 2. size: duration
 func NewDefaultLimiter(limit uint64, size time.Duration) *DefaultLimiter {
 	previous := NewWindow(0, time.Unix(0, 0))
 	current := NewWindow(0, time.Unix(0, 0))
@@ -102,6 +118,7 @@ func NewDefaultLimiter(limit uint64, size time.Duration) *DefaultLimiter {
 	return limiter
 }
 
+// SyncLimiter maintains all the structures used for rate limting on demand.
 type SyncLimiter struct {
 	previous *Window
 	current  *Window
@@ -118,6 +135,14 @@ func (s *SyncLimiter) getNSlidesSince(now time.Time) (time.Duration, time.Time) 
 	return timeSinceStart / s.size, sizeAlignedTime
 }
 
+// Makes decison whether n tasks can be allowed or not.
+//
+// Parameters:
+//
+// 1. n: number of tasks to be processed, set this as 1 for a single task. (Example: An HTTP request)
+//
+// Returns (bool, error). (false, error) if limiter is inactive (or it is killed). Otherwise,
+// (true/false, error) depending on whether n tasks can be allowed or not.
 func (s *SyncLimiter) ShouldAllow(n uint64) (bool, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -166,6 +191,7 @@ func (s *SyncLimiter) ShouldAllow(n uint64) (bool, error) {
 	return true, nil
 }
 
+// Kill the limiter, returns error if the limiter has been killed already.
 func (s *SyncLimiter) Kill() error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -180,6 +206,13 @@ func (s *SyncLimiter) Kill() error {
 	return nil
 }
 
+// Creates an instance of SyncLimiter and returns it's pointer.
+//
+// Parameters:
+//
+// 1. limit: The number of tasks to be allowd
+//
+// 2. size: duration
 func NewSyncLimiter(limit uint64, size time.Duration) *SyncLimiter {
 
 	current := NewWindow(0, time.Unix(0, 0))
