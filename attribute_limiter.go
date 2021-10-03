@@ -11,6 +11,7 @@ type AttributeMap map[string]Limiter
 type AttributeBasedLimiter struct {
 	attributeMap AttributeMap
 	m            sync.Mutex
+	syncMode     bool
 }
 
 func (a *AttributeBasedLimiter) HasKey(key string) bool {
@@ -31,7 +32,11 @@ func (a *AttributeBasedLimiter) CreateNewKey(key string, limit uint64, size time
 	}
 
 	// create a new entry:
-	a.attributeMap[key] = *NewLimiter(limit, size)
+	if !a.syncMode {
+		a.attributeMap[key] = NewDefaultLimiter(limit, size)
+	} else {
+		a.attributeMap[key] = NewSyncLimiter(limit, size)
+	}
 	return nil
 }
 
@@ -64,8 +69,9 @@ func (a *AttributeBasedLimiter) DeleteKey(key string) error {
 	return fmt.Errorf("key %s not found", key)
 }
 
-func NewAttributeBasedLimiter() *AttributeBasedLimiter {
+func NewAttributeBasedLimiter(backgroundSliding bool) *AttributeBasedLimiter {
 	return &AttributeBasedLimiter{
 		attributeMap: make(AttributeMap),
+		syncMode:     !backgroundSliding,
 	}
 }

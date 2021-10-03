@@ -6,7 +6,7 @@ import (
 
 type Window struct {
 	count     uint64
-	startTime int64
+	startTime time.Time
 }
 
 func (w *Window) updateCount(n uint64) {
@@ -14,7 +14,7 @@ func (w *Window) updateCount(n uint64) {
 }
 
 func (w *Window) getStartTime() time.Time {
-	return time.Unix(0, w.startTime)
+	return w.startTime
 }
 
 func (w *Window) setStateFrom(other *Window) {
@@ -23,15 +23,19 @@ func (w *Window) setStateFrom(other *Window) {
 }
 
 func (w *Window) resetToTime(startTime time.Time) {
-	nsTime := startTime.UnixNano()
 	w.count = 0
-	w.startTime = nsTime
+	w.startTime = startTime
+}
+
+func (w *Window) setToState(startTime time.Time, count uint64) {
+	w.startTime = startTime
+	w.count = count
 }
 
 func NewWindow(count uint64, startTime time.Time) *Window {
-	nsTime := startTime.UnixNano()
+
 	return &Window{
 		count:     count,
-		startTime: int64(nsTime),
+		startTime: startTime,
 	}
 }
