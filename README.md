@@ -1,6 +1,7 @@
 # ratelimiter
 
 ![Tests](https://github.com/Narasimha1997/ratelimiter/actions/workflows/test.yml/badge.svg)
+[![Go Reference](https://pkg.go.dev/badge/github.com/Narasimha1997/ratelimiter.svg)](https://pkg.go.dev/github.com/Narasimha1997/ratelimiter)
 
 A generic concurrent rate limiter library for Golang based on Sliding-window rate limitng algorithm.
 
