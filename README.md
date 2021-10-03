@@ -16,8 +16,116 @@ go get github.com/Narasimha1997/ratelimiter
 ### Using the library:
 There are two types of rate-limiters used.
 
+#### All APIs:
+1. **Generic rate-limiter**:
+```go 
+	/* creates an instance of DefaultLimiter and returns it's pointer.
+	 Parameters:
+	 	limit: The number of tasks to be allowd
+		size: duration
+	*/
+	func NewDefaultLimiter(limit uint64, size time.Duration) *DefaultLimiter
+	
+```
+
+2. **On-demand rate-limiter**
+```go
+	/*  creates an instance of DefaultLimiter and returns it's pointer.
+	 	Parameters:
+	 		limit: The number of tasks to be allowd
+			size: duration
+	*/
+	func NewSyncLimiter(limit uint64, size time.Duration) *SyncLimiter
+
+	/*
+		Kill the limiter, returns error if the limiter has been killed already.
+	*/
+	func (s *SyncLimiter) Kill() error
+
+	/*
+		Makes decison whether n tasks can be allowed or not.
+		Parameters:
+			n: number of tasks to be processed, set this as 1 for a single task. 
+				(Example: An HTTP request)
+		Returns (bool, error),
+			if limiter is inactive (or it is killed), returns an error
+			the boolean flag is either true - i.e n tasks can be allowed or false otherwise.
+	*/
+	func (s *SyncLimiter) ShouldAllow(n uint64) (bool, error)
+
+	/*
+		Kill the limiter, returns error if the limiter has been killed already.
+	*/
+	func (s *SyncLimiter) Kill() error
+
+	/*
+		Makes decison whether n tasks can be allowed or not.
+		Parameters:
+			n: number of tasks to be processed, set this as 1 for a single task. 
+				(Example: An HTTP request)
+		Returns (bool, error),
+			if limiter is inactive (or it is killed), returns an error
+			the boolean flag is either true - i.e n tasks can be allowed or false otherwise.
+	*/
+	func (s *SyncLimiter) ShouldAllow(n uint64) (bool, error)
+```
+
+3. **Attribute based Rate Limiter**
+```go
+	/*
+		Creates an instance of AttributeBasedLimiter and returns it's pointer.
+		Parameters:
+			backgroundSliding: if set to true, DefaultLimiter will be used as an underlying limiter.
+							   else, SyncLimiter will be used.
+	*/
+	func NewAttributeBasedLimiter(backgroundSliding bool) *AttributeBasedLimiter
+
+	/*
+		Check if AttributeBasedLimiter has a limiter for the key.
+		Parameters:
+			key: a unique key string, example: IP address, token, uuid etc
+		Returns a boolean flag, if true, the key is already present, false otherwise.
+	*/
+	func (a *AttributeBasedLimiter) HasKey(key string) bool
+
+	/*
+		Create a new key-limiter assiociation.
+		Parameters:
+			key: a unique key string, example: IP address, token, uuid etc
+			limit: The number of tasks to be allowd
+			size: duration
+		Returns error if the key already exist.
+	*/
+
+	func (a *AttributeBasedLimiter) CreateNewKey(
+		key string, limit uint64, 
+		size time.Duration,
+	) error
+
+	/*
+		Makes decison whether n tasks can be allowed or not.
+		Parameters:
+			key: a unique key string, example: IP address, token, uuid etc
+			n: number of tasks to be processed, set this as 1 for a single task. 
+				(Example: An HTTP request)
+		Returns (bool, error),
+			if limiter is inactive (or it is killed) or key is not present, returns an error
+			the boolean flag is either true - i.e n tasks can be allowed or false otherwise.
+	*/
+	func (a *AttributeBasedLimiter) ShouldAllow(key string, n uint64) (bool, error)
+
+	/*
+		Remove the key and kill its underlying limiter.
+		Parameters:
+			key: a unique key string, example: IP address, token, uuid etc
+		Returns an error if the key is not present.
+	*/
+	func (a *AttributeBasedLimiter) DeleteKey(key string) error
+```
+
+### Examples and Explanation of each type of rate-limiter:
 #### Generic rate-limiter
-The generic rate-limiter instance can be created if you want to have a single rate-limiter with single configuration for everything. The generic rate-limiter can be created by calling `NewLimiter()` function and by passing the `limit` and `size` as parameters. Example:
+The generic rate-limiter instance can be created if you want to have a single rate-limiter with single configuration for everything. The generic rate-limiter can be created by calling `NewDefaultLimiter()` function and by passing the `limit` and `size` as parameters. Example:
 
 ```go
 func GenericRateLimiter() {
@@ -30,7 +138,7 @@ func GenericRateLimiter() {
 		To summarize, if limit = 100 and duration = 5s, then allow 100 items per 5 seconds
 	*/
 
-	limiter := ratelimiter.NewLimiter(
+	limiter := ratelimiter.NewDefaultLimiter(
 		100, time.Second*5,
 	)
 
@@ -65,6 +173,19 @@ func GenericRateLimiter() {
 }
 ```
 
+#### On demand window sliding:
+The previous method i.e the Generic Rate limiter spins up a background goroutine that takes care of sliding the rate-limiting window whenever it's size expires, because of this, rate-limiting check function `ShouldAllow` has fewer steps and takes very less time to make decision. But if your application manages a large number of Limiters, for example a web-server that performs rate-limiting across hundreds of different IPs, then your `AttributeBasedRateLimiter` spins up a goroutine for each unique IP and thus lot of such routines needs to be manitanied, this might induce scheduling pressure.
+
+An alternative solution is to use a rate-limiter does not require a background routine, instead the window is sliding is taken care by `ShouldAllow` function itself, this method can be used to maintain large number of rate limiters without any scheduling pressure. This limiter is called `SyncLimiter` and can be used just like `DefaultLimiter`, because `SyncLimiter` and `DefaultLimiter` are built on top of the same `Limiter` interface. To use this, just replace `NewDefaultLimiter` with `NewSyncLimiter`
+```go
+......
+
+	limiter := ratelimiter.NewSyncLimiter(
+		100, time.Second*5,
+	)
+......
+```
+
 #### Attribute based rate-limiter:
 Attribute based rate-limiter can hold multiple rate-limiters with different configurations in a map
 of <string, Limiter> type. Each limiter is uniquely identified by a key. Calling  `NewAttributeBasedLimiter()` will create an empty rate limiter with no entries.
@@ -78,7 +199,17 @@ func AttributeRateLimiter() {
 		by a key. Calling NewAttributeBasedLimiter() will create an empty
 		rate limiter with no entries.
 	*/
-	limiter := ratelimiter.NewAttributeBasedLimiter()
+	/*
+		Attribute based rate-limiter has a boolean parameter called:
+		`backgroundSliding` - if set to true, the attribute based rate-limiter
+		uses Limiter instance and each Limiter instance have it's own background goroutine
+		to manage sliding window. This might be resource expensive for large number of attributes,
+		but is faster than SyncLimiter.
+
+		Disable this, i.e pass `false` if you want to manage large number of attributes
+		in less memory and compute, sacrifcing a minimal amount of performance.
+	*/
+	limiter := ratelimiter.NewAttributeBasedLimiter(true)
 
 	/*
 		Now we are adding a new entry to the limiter, we pass:
@@ -196,7 +327,7 @@ go test -coverprofile=c.out
 
 This should print the following after running all the tests.
 ```
-coverage: 98.6% of statements
+coverage: 99.0% of statements
 ok      github.com/Narasimha1997/ratelimiter    25.099s
 ```
 
