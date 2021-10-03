@@ -1,4 +1,7 @@
 # ratelimiter
+
+![Tests](https://github.com/Narasimha1997/ratelimiter/actions/workflows/test.yml/badge.svg)
+
 A generic concurrent rate limiter library for Golang based on Sliding-window rate limitng algorithm.
 
 The implementation of rate-limiter algorithm is based on Scalable Distributed Rate Limiter algorithm  used in Kong API gateway. Read [this blog](https://konghq.com/blog/how-to-design-a-scalable-rate-limiting-algorithm/) for more details.
@@ -20,17 +23,37 @@ There are two types of rate-limiters used.
 1. **Generic rate-limiter**:
 ```go 
 	/* creates an instance of DefaultLimiter and returns it's pointer.
-	 Parameters:
-	 	limit: The number of tasks to be allowd
-		size: duration
+	   Parameters:
+	 		limit: The number of tasks to be allowd
+			size: duration
 	*/
 	func NewDefaultLimiter(limit uint64, size time.Duration) *DefaultLimiter
-	
+
+	/*
+		Kill the limiter, returns error if the limiter has been killed already.
+	*/
+	func (s *DefaultLimiter) Kill() error
+
+	/*
+		Makes decison whether n tasks can be allowed or not.
+		Parameters:
+			n: number of tasks to be processed, set this as 1 for a single task. 
+				(Example: An HTTP request)
+		Returns (bool, error),
+			if limiter is inactive (or it is killed), returns an error
+			the boolean flag is either true - i.e n tasks can be allowed or false otherwise.
+	*/
+	func (s *DefaultLimiter) ShouldAllow(n uint64) (bool, error)
+
+	/*
+		Kill the limiter, returns error if the limiter has been killed already.
+	*/
+	func (s *DefaultLimiter) Kill() error	
 ```
 
 2. **On-demand rate-limiter**
 ```go
-	/*  creates an instance of DefaultLimiter and returns it's pointer.
+	/*  creates an instance of SyncLimiter and returns it's pointer.
 	 	Parameters:
 	 		limit: The number of tasks to be allowd
 			size: duration
@@ -57,17 +80,6 @@ There are two types of rate-limiters used.
 		Kill the limiter, returns error if the limiter has been killed already.
 	*/
 	func (s *SyncLimiter) Kill() error
-
-	/*
-		Makes decison whether n tasks can be allowed or not.
-		Parameters:
-			n: number of tasks to be processed, set this as 1 for a single task. 
-				(Example: An HTTP request)
-		Returns (bool, error),
-			if limiter is inactive (or it is killed), returns an error
-			the boolean flag is either true - i.e n tasks can be allowed or false otherwise.
-	*/
-	func (s *SyncLimiter) ShouldAllow(n uint64) (bool, error)
 ```
 
 3. **Attribute based Rate Limiter**
