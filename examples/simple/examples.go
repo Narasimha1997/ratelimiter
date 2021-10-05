@@ -142,7 +142,7 @@ func TestLoop() {
 	}
 }
 
-func main() {
+/*func main() {
 
 	fmt.Println("Generic rate limiter:")
 	GenericRateLimiter()
@@ -151,4 +151,4 @@ func main() {
 
 	fmt.Println("Test loop with rate limited values:")
 	TestLoop()
-}
+}*/

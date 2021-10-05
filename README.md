@@ -273,6 +273,65 @@ func AttributeRateLimiter() {
 }
 ```
 
+### Using ratelimiter as a middleware with HTTP web server:
+ratelimiter is pluggable and can be used anywhere. This code snippet shows how it can be used with
+Go's standard HTTP library when building a web server:
+
+```go
+.....
+// allow 100 requests every 5 seconds
+limiter := ratelimiter.NewSyncLimiter(100, time.Second * 5)
+
+// register the handler
+rateLimiterHandler := func(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		allowed, err := limiter.ShouldAllow(1)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		if allowed {
+			next.ServeHTTP(w, r)
+		}
+	})
+}
+
+// create a test route handler
+ponger := func(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Pong!!"))
+}
+
+// attach the ratelimiter middleware:
+muxServer := http.NewServeMux()
+muxServer.Handle("/", rateLimiterHandler(
+	http.HandlerFunc(ponger),
+))
+
+// start the server
+err := http.ListenAndServe(":6000", muxServer)
+if err != nil {
+	log.Fatalln(err)
+}
+```
+The complete example can be found at `examples/http-server/server.go`.
+`curl` was used to simulate `X` requests per second and following was the output, as logged.
+```
+................................
+2021/10/05 14:12:38 Iteration: 7, Requests received: 522, Allowed: 99
+2021/10/05 14:12:43 Iteration: 8, Requests received: 533, Allowed: 101
+2021/10/05 14:12:48 Iteration: 9, Requests received: 515, Allowed: 100
+2021/10/05 14:12:53 Iteration: 10, Requests received: 505, Allowed: 100
+2021/10/05 14:12:58 Iteration: 11, Requests received: 508, Allowed: 100
+2021/10/05 14:13:03 Iteration: 12, Requests received: 474, Allowed: 100
+2021/10/05 14:13:08 Iteration: 13, Requests received: 495, Allowed: 100
+2021/10/05 14:13:13 Iteration: 14, Requests received: 478, Allowed: 100
+..................................
+```
+The ratelimiter was able to balance the requested limit as specified.
+If you have installed the package, you can simply run the webserver as follows:
+```
+go run examples/http-server/server.go
+```
+
 ### Testing
 Tests are written in `attribute_limiter_test.go` and `limiter_test.go` files. To execute the tests, 
 simply run:
