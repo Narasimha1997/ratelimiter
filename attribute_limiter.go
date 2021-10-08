@@ -17,7 +17,7 @@ type AttributeBasedLimiter struct {
 	syncMode     bool
 }
 
-// Check if AttributeBasedLimiter has a limiter for the key.
+// HasKey check if AttributeBasedLimiter has a limiter for the key.
 //
 // Parameters:
 //
@@ -31,7 +31,7 @@ func (a *AttributeBasedLimiter) HasKey(key string) bool {
 	return ok
 }
 
-// Create a new key-limiter assiociation.
+// CreateNewKey create a new key-limiter assiociation.
 //
 // Parameters:
 //
@@ -46,6 +46,10 @@ func (a *AttributeBasedLimiter) CreateNewKey(key string, limit uint64, size time
 	a.m.Lock()
 	defer a.m.Unlock()
 
+	return a.createNewKey(key, limit, size)
+}
+
+func (a *AttributeBasedLimiter) createNewKey(key string, limit uint64, size time.Duration) error {
 	if _, ok := a.attributeMap[key]; ok {
 		return fmt.Errorf(
 			"key %s is already defined", key,
@@ -61,7 +65,34 @@ func (a *AttributeBasedLimiter) CreateNewKey(key string, limit uint64, size time
 	return nil
 }
 
-// Makes decison whether n tasks can be allowed or not.
+// HasOrCreateKey check if AttributeBasedLimiter has a limiter for the key.
+// Create a new key-limiter assiociation if the key not exists.
+//
+// Parameters:
+//
+// 1. key: a unique key string, example: IP address, token, uuid etc
+//
+// 2. limit: The number of tasks to be allowd
+//
+// 3. size: duration
+//
+// Return true if the key exists or is created successfully.
+func (a *AttributeBasedLimiter) HasOrCreateKey(key string, limit uint64, size time.Duration) bool {
+	a.m.Lock()
+	defer a.m.Unlock()
+
+	if _, ok := a.attributeMap[key]; ok {
+		return true
+	}
+
+	if err := a.createNewKey(key, limit, size); err == nil {
+		return true
+	}
+
+	return false
+}
+
+// ShouldAllow makes decison whether n tasks can be allowed or not.
 //
 // Parameters:
 //
@@ -85,7 +116,32 @@ func (a *AttributeBasedLimiter) ShouldAllow(key string, n uint64) (bool, error) 
 	return false, fmt.Errorf("key %s not found", key)
 }
 
-// Remove the key and kill its underlying limiter.
+// MustShouldAllow makes decison whether n tasks can be allowed or not.
+//
+// Parameters:
+//
+// key: a unique key string, example: IP address, token, uuid etc
+//
+// n: number of tasks to be processed, set this as 1 for a single task.
+// (Example: An HTTP request)
+//
+// Returns bool.
+// (false) when limiter is inactive (or it is killed) or n tasks can be not allowed.
+// (true) when n tasks can be allowed or new key-limiter.
+func (a *AttributeBasedLimiter) MustShouldAllow(key string, n uint64, limit uint64, size time.Duration) bool {
+	a.m.Lock()
+	defer a.m.Unlock()
+
+	if limiter, ok := a.attributeMap[key]; ok {
+		allowed, err := limiter.ShouldAllow(n)
+		return allowed && err == nil
+	}
+
+	err := a.createNewKey(key, limit, size)
+	return err == nil
+}
+
+// DeleteKey remove the key and kill its underlying limiter.
 //
 // Parameters:
 //
@@ -109,7 +165,7 @@ func (a *AttributeBasedLimiter) DeleteKey(key string) error {
 	return fmt.Errorf("key %s not found", key)
 }
 
-// Creates an instance of AttributeBasedLimiter and returns it's pointer.
+// NewAttributeBasedLimiter creates an instance of AttributeBasedLimiter and returns it's pointer.
 //
 // Parameters:
 //
