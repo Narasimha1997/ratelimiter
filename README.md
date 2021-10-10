@@ -115,6 +115,17 @@ There are two types of rate-limiters used.
 		size time.Duration,
 	) error
 
+	/* 
+	   check if AttributeBasedLimiter has a limiter for the key.
+	   Create a new key-limiter assiociation if the key not exists.
+	   Parameters:
+	    key: a unique key string, example: IP address, token, uuid etc.
+		limit: The number of tasks to be allowd
+		size: duration
+		Return true if the key exists or is created successfully.
+	*/
+	func (a *AttributeBasedLimiter) HasOrCreateKey(key string, limit uint64, size time.Duration);
+
 	/*
 		Makes decison whether n tasks can be allowed or not.
 		Parameters:
@@ -126,6 +137,22 @@ There are two types of rate-limiters used.
 			the boolean flag is either true - i.e n tasks can be allowed or false otherwise.
 	*/
 	func (a *AttributeBasedLimiter) ShouldAllow(key string, n uint64) (bool, error)
+
+	/* 
+		MustShouldAllow makes decison whether n tasks can be allowed or not.
+		Creates a new key if it does not exist.
+		Parameters:
+			key: a unique key string, example: IP address, token, uuid etc
+			n: number of tasks to be processed, set this as 1 for a single task.
+			(Example: An HTTP request)
+			limit: The number of tasks to be allowd
+			size: duration
+
+		Returns bool.
+			(false) when limiter is inactive (or it is killed) or n tasks can be not allowed.
+			(true) when n tasks can be allowed or new key-limiter.
+	*/
+	func (a *AttributeBasedLimiter) MustShouldAllow(key string, n uint64, limit uint64, size time.Duration) bool
 
 	/*
 		Remove the key and kill its underlying limiter.
