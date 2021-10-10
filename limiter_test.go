@@ -7,6 +7,18 @@ import (
 	"time"
 )
 
+func TestInvalidLimiterConfiguration(t *testing.T) {
+	limiter := NewDefaultLimiter(10, time.Microsecond*800)
+	if _, err := limiter.ShouldAllow(3); err == nil {
+		t.Fatalf("ShouldAllow() failed, did not throw error when window size <= 1 millisecond")
+	}
+
+	limiter1 := NewSyncLimiter(0, 10*time.Second)
+	if _, err := limiter1.ShouldAllow(10); err == nil {
+		t.Fatalf("ShouldAllow() failed, did not throw error when limit == 0")
+	}
+}
+
 func TestLimiterAccuracy(t *testing.T) {
 
 	nRuns := 10

@@ -57,7 +57,7 @@
 				
 				<option value="file0">github.com/Narasimha1997/ratelimiter/attribute_limiter.go (93.6%)</option>
 				
-				<option value="file1">github.com/Narasimha1997/ratelimiter/limiter.go (97.1%)</option>
+				<option value="file1">github.com/Narasimha1997/ratelimiter/limiter.go (100.0%)</option>
 				
 				<option value="file2">github.com/Narasimha1997/ratelimiter/window.go (100.0%)</option>
 				
@@ -304,7 +304,7 @@ func (l *DefaultLimiter) ShouldAllow(n uint64) (bool, error) <span class="cov8" 
                 return false, fmt.Errorf("function ShouldAllow called on an inactive instance")
         }</span>
 
-        <span class="cov8" title="1">if l.limit == 0 || l.size &lt; time.Millisecond </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if l.limit == 0 || l.size &lt; time.Millisecond </span><span class="cov8" title="1">{
                 return false, fmt.Errorf("invalid limiter configuration")
         }</span>
 
@@ -416,7 +416,7 @@ func (s *SyncLimiter) ShouldAllow(n uint64) (bool, error) <span class="cov8" tit
                 return false, fmt.Errorf("function ShouldAllow called on an inactive instance")
         }</span>
 
-        <span class="cov8" title="1">if s.limit == 0 || s.size &lt; time.Millisecond </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if s.limit == 0 || s.size &lt; time.Millisecond </span><span class="cov8" title="1">{
                 return false, fmt.Errorf("invalid limiter configuration")
         }</span>
 
