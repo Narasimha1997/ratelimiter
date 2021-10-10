@@ -55,9 +55,9 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/Narasimha1997/ratelimiter/attribute_limiter.go (96.2%)</option>
+				<option value="file0">github.com/Narasimha1997/ratelimiter/attribute_limiter.go (93.6%)</option>
 				
-				<option value="file1">github.com/Narasimha1997/ratelimiter/limiter.go (100.0%)</option>
+				<option value="file1">github.com/Narasimha1997/ratelimiter/limiter.go (97.1%)</option>
 				
 				<option value="file2">github.com/Narasimha1997/ratelimiter/window.go (100.0%)</option>
 				
@@ -81,13 +81,24 @@ import (
         "time"
 )
 
+// AttributeMap is a custom map type of string key and Limiter instance as value
 type AttributeMap map[string]Limiter
 
+// AttributeBasedLimiter is an instance that can manage multiple rate limiter instances
+// with different configutations.
 type AttributeBasedLimiter struct {
         attributeMap AttributeMap
         m            sync.Mutex
+        syncMode     bool
 }
 
+// HasKey check if AttributeBasedLimiter has a limiter for the key.
+//
+// Parameters:
+//
+// 1. key: a unique key string, example: IP address, token, uuid etc
+//
+// Returns a boolean flag, if true, the key is already present, false otherwise.
 func (a *AttributeBasedLimiter) HasKey(key string) bool <span class="cov8" title="1">{
         a.m.Lock()
         _, ok := a.attributeMap[key]
@@ -95,10 +106,25 @@ func (a *AttributeBasedLimiter) HasKey(key string) bool <span class="cov8" title
         return ok
 }</span>
 
+// CreateNewKey create a new key-limiter assiociation.
+//
+// Parameters:
+//
+// 1. key: a unique key string, example: IP address, token, uuid etc
+//
+// 2. limit: The number of tasks to be allowd
+//
+// 3. size: duration
+//
+// Returns error if the key already exists.
 func (a *AttributeBasedLimiter) CreateNewKey(key string, limit uint64, size time.Duration) error <span class="cov8" title="1">{
         a.m.Lock()
         defer a.m.Unlock()
 
+        return a.createNewKey(key, limit, size)
+}</span>
+
+func (a *AttributeBasedLimiter) createNewKey(key string, limit uint64, size time.Duration) error <span class="cov8" title="1">{
         if _, ok := a.attributeMap[key]; ok </span><span class="cov8" title="1">{
                 return fmt.Errorf(
                         "key %s is already defined", key,
@@ -106,10 +132,53 @@ func (a *AttributeBasedLimiter) CreateNewKey(key string, limit uint64, size time
         }</span>
 
         // create a new entry:
-        <span class="cov8" title="1">a.attributeMap[key] = *NewLimiter(limit, size)
-        return nil</span>
+        <span class="cov8" title="1">if !a.syncMode </span><span class="cov8" title="1">{
+                a.attributeMap[key] = NewDefaultLimiter(limit, size)
+        }</span> else<span class="cov8" title="1"> {
+                a.attributeMap[key] = NewSyncLimiter(limit, size)
+        }</span>
+        <span class="cov8" title="1">return nil</span>
 }
 
+// HasOrCreateKey check if AttributeBasedLimiter has a limiter for the key.
+// Create a new key-limiter assiociation if the key not exists.
+//
+// Parameters:
+//
+// 1. key: a unique key string, example: IP address, token, uuid etc
+//
+// 2. limit: The number of tasks to be allowd
+//
+// 3. size: duration
+//
+// Return true if the key exists or is created successfully.
+func (a *AttributeBasedLimiter) HasOrCreateKey(key string, limit uint64, size time.Duration) bool <span class="cov8" title="1">{
+        a.m.Lock()
+        defer a.m.Unlock()
+
+        if _, ok := a.attributeMap[key]; ok </span><span class="cov8" title="1">{
+                return true
+        }</span>
+
+        <span class="cov8" title="1">if err := a.createNewKey(key, limit, size); err == nil </span><span class="cov8" title="1">{
+                return true
+        }</span>
+
+        <span class="cov0" title="0">return false</span>
+}
+
+// ShouldAllow makes decison whether n tasks can be allowed or not.
+//
+// Parameters:
+//
+// key: a unique key string, example: IP address, token, uuid etc
+//
+// n: number of tasks to be processed, set this as 1 for a single task.
+// (Example: An HTTP request)
+//
+// Returns (bool, error).
+// (false, error) when limiter is inactive (or it is killed) or key is not present.
+// (true/false, nil) if key exists and n tasks can be allowed or not.
 func (a *AttributeBasedLimiter) ShouldAllow(key string, n uint64) (bool, error) <span class="cov8" title="1">{
         a.m.Lock()
         defer a.m.Unlock()
@@ -122,6 +191,45 @@ func (a *AttributeBasedLimiter) ShouldAllow(key string, n uint64) (bool, error) 
         <span class="cov8" title="1">return false, fmt.Errorf("key %s not found", key)</span>
 }
 
+// MustShouldAllow makes decison whether n tasks can be allowed or not.
+//
+// Parameters:
+//
+// key: a unique key string, example: IP address, token, uuid etc
+//
+// n: number of tasks to be processed, set this as 1 for a single task.
+// (Example: An HTTP request)
+//
+// Returns bool.
+// (false) when limiter is inactive (or it is killed) or n tasks can be not allowed.
+// (true) when n tasks can be allowed or new key-limiter.
+func (a *AttributeBasedLimiter) MustShouldAllow(key string, n uint64, limit uint64, size time.Duration) bool <span class="cov8" title="1">{
+        a.m.Lock()
+        defer a.m.Unlock()
+
+        if limiter, ok := a.attributeMap[key]; ok </span><span class="cov8" title="1">{
+                allowed, err := limiter.ShouldAllow(n)
+                return allowed &amp;&amp; err == nil
+        }</span>
+
+        <span class="cov8" title="1">err := a.createNewKey(key, limit, size)
+        if err != nil </span><span class="cov0" title="0">{
+                return err == nil
+        }</span>
+
+        // check ratelimiter on newly created key:
+        <span class="cov8" title="1">limiter := a.attributeMap[key]
+        allowed, err := limiter.ShouldAllow(n)
+        return allowed &amp;&amp; err == nil</span>
+}
+
+// DeleteKey remove the key and kill its underlying limiter.
+//
+// Parameters:
+//
+// 1.key: a unique key string, example: IP address, token, uuid etc
+//
+// Returns an error if the key is not present.
 func (a *AttributeBasedLimiter) DeleteKey(key string) error <span class="cov8" title="1">{
 
         a.m.Lock()
@@ -139,9 +247,16 @@ func (a *AttributeBasedLimiter) DeleteKey(key string) error <span class="cov8" t
         <span class="cov8" title="1">return fmt.Errorf("key %s not found", key)</span>
 }
 
-func NewAttributeBasedLimiter() *AttributeBasedLimiter <span class="cov8" title="1">{
+// NewAttributeBasedLimiter creates an instance of AttributeBasedLimiter and returns it's pointer.
+//
+// Parameters:
+//
+// 1. backgroundSliding: if set to true, DefaultLimiter will be used as an underlying limiter,
+// else, SyncLimiter will be used.
+func NewAttributeBasedLimiter(backgroundSliding bool) *AttributeBasedLimiter <span class="cov8" title="1">{
         return &amp;AttributeBasedLimiter{
                 attributeMap: make(AttributeMap),
+                syncMode:     !backgroundSliding,
         }
 }</span>
 </pre>
@@ -155,7 +270,14 @@ import (
         "time"
 )
 
-type Limiter struct {
+// Limiter is an interface that is implemented by DefaultLimiter and SyncLimiter
+type Limiter interface {
+        Kill() error
+        ShouldAllow(n uint64) (bool, error)
+}
+
+// DefaultLimiter maintains all the structures used for rate limting using a background goroutine.
+type DefaultLimiter struct {
         previous      *Window
         current       *Window
         lock          sync.Mutex
@@ -166,13 +288,24 @@ type Limiter struct {
         cancelFn      func()
 }
 
-func (l *Limiter) ShouldAllow(n uint64) (bool, error) <span class="cov8" title="1">{
-
+// ShouldAllow makes decison whether n tasks can be allowed or not.
+//
+// Parameters:
+//
+// 1. n: number of tasks to be processed, set this as 1 for a single task. (Example: An HTTP request)
+//
+// Returns (bool, error). (false, error) if limiter is inactive (or it is killed). Otherwise,
+// (true/false, nil) depending on whether n tasks can be allowed or not.
+func (l *DefaultLimiter) ShouldAllow(n uint64) (bool, error) <span class="cov8" title="1">{
         l.lock.Lock()
         defer l.lock.Unlock()
 
         if l.killed </span><span class="cov8" title="1">{
                 return false, fmt.Errorf("function ShouldAllow called on an inactive instance")
+        }</span>
+
+        <span class="cov8" title="1">if l.limit == 0 || l.size &lt; time.Millisecond </span><span class="cov0" title="0">{
+                return false, fmt.Errorf("invalid limiter configuration")
         }</span>
 
         <span class="cov8" title="1">currentTime := time.Now()
@@ -191,7 +324,7 @@ func (l *Limiter) ShouldAllow(n uint64) (bool, error) <span class="cov8" title="
         return true, nil</span>
 }
 
-func (l *Limiter) progressiveWindowSlider() <span class="cov8" title="1">{
+func (l *DefaultLimiter) progressiveWindowSlider() <span class="cov8" title="1">{
         for </span><span class="cov8" title="1">{
                 select </span>{
                 case &lt;-l.windowContext.Done():<span class="cov8" title="1">
@@ -208,8 +341,8 @@ func (l *Limiter) progressiveWindowSlider() <span class="cov8" title="1">{
         }
 }
 
-func (l *Limiter) Kill() error <span class="cov8" title="1">{
-
+// Kill the limiter, returns error if the limiter has been killed already.
+func (l *DefaultLimiter) Kill() error <span class="cov8" title="1">{
         l.lock.Lock()
         defer l.lock.Unlock()
 
@@ -222,13 +355,20 @@ func (l *Limiter) Kill() error <span class="cov8" title="1">{
         return nil</span>
 }
 
-func NewLimiter(limit uint64, size time.Duration) *Limiter <span class="cov8" title="1">{
-        previous := NewWindow(0, time.Now())
-        current := NewWindow(0, time.Now())
+// NewDefaultLimiter creates an instance of DefaultLimiter and returns it's pointer.
+//
+// Parameters:
+//
+// 1. limit: The number of tasks to be allowd
+//
+// 2. size: duration
+func NewDefaultLimiter(limit uint64, size time.Duration) *DefaultLimiter <span class="cov8" title="1">{
+        previous := NewWindow(0, time.Unix(0, 0))
+        current := NewWindow(0, time.Unix(0, 0))
 
         childCtx, cancelFn := context.WithCancel(context.Background())
 
-        limiter := &amp;Limiter{
+        limiter := &amp;DefaultLimiter{
                 previous:      previous,
                 current:       current,
                 lock:          sync.Mutex{},
@@ -242,6 +382,119 @@ func NewLimiter(limit uint64, size time.Duration) *Limiter <span class="cov8" ti
         go limiter.progressiveWindowSlider()
         return limiter
 }</span>
+
+// SyncLimiter maintains all the structures used for rate limting on demand.
+type SyncLimiter struct {
+        previous *Window
+        current  *Window
+        lock     sync.Mutex
+        size     time.Duration
+        limit    uint64
+        killed   bool
+}
+
+func (s *SyncLimiter) getNSlidesSince(now time.Time) (time.Duration, time.Time) <span class="cov8" title="1">{
+        sizeAlignedTime := now.Truncate(s.size)
+        timeSinceStart := sizeAlignedTime.Sub(s.current.getStartTime())
+
+        return timeSinceStart / s.size, sizeAlignedTime
+}</span>
+
+// ShouldAllow makes decison whether n tasks can be allowed or not.
+//
+// Parameters:
+//
+// 1. n: number of tasks to be processed, set this as 1 for a single task. (Example: An HTTP request)
+//
+// Returns (bool, error). (false, error) if limiter is inactive (or it is killed). Otherwise,
+// (true/false, error) depending on whether n tasks can be allowed or not.
+func (s *SyncLimiter) ShouldAllow(n uint64) (bool, error) <span class="cov8" title="1">{
+        s.lock.Lock()
+        defer s.lock.Unlock()
+
+        if s.killed </span><span class="cov8" title="1">{
+                return false, fmt.Errorf("function ShouldAllow called on an inactive instance")
+        }</span>
+
+        <span class="cov8" title="1">if s.limit == 0 || s.size &lt; time.Millisecond </span><span class="cov0" title="0">{
+                return false, fmt.Errorf("invalid limiter configuration")
+        }</span>
+
+        <span class="cov8" title="1">currentTime := time.Now()
+
+        // advance the window on demand, as this doesn't make use of goroutine.
+        nSlides, alignedCurrentTime := s.getNSlidesSince(currentTime)
+
+        // window slide shares both current and previous windows.
+        if nSlides == 1 </span><span class="cov8" title="1">{
+                s.previous.setToState(
+                        alignedCurrentTime.Add(-s.size),
+                        s.current.count,
+                )
+
+                s.current.resetToTime(
+                        alignedCurrentTime,
+                )
+
+        }</span> else<span class="cov8" title="1"> if nSlides &gt; 1 </span><span class="cov8" title="1">{
+                s.previous.resetToTime(
+                        alignedCurrentTime.Add(-s.size),
+                )
+                s.current.resetToTime(
+                        alignedCurrentTime,
+                )
+        }</span>
+
+        <span class="cov8" title="1">currentWindowBoundary := currentTime.Sub(s.current.getStartTime())
+
+        w := float64(s.size-currentWindowBoundary) / float64(s.size)
+
+        currentSlidingRequests := uint64(w*float64(s.previous.count)) + s.current.count
+
+        if currentSlidingRequests+n &gt; s.limit </span><span class="cov8" title="1">{
+                return false, nil
+        }</span>
+
+        // add current request count to window of current count
+        <span class="cov8" title="1">s.current.updateCount(n)
+        return true, nil</span>
+}
+
+// Kill the limiter, returns error if the limiter has been killed already.
+func (s *SyncLimiter) Kill() error <span class="cov8" title="1">{
+        s.lock.Lock()
+        defer s.lock.Unlock()
+
+        if s.killed </span><span class="cov8" title="1">{
+                return fmt.Errorf("called Kill on already killed limiter")
+        }</span>
+
+        // kill is a dummy implementation for SyncLimiter,
+        // because there is no need of stopping a go-routine.
+        <span class="cov8" title="1">s.killed = true
+        return nil</span>
+}
+
+// NewSyncLimiter creates an instance of SyncLimiter and returns it's pointer.
+//
+// Parameters:
+//
+// 1. limit: The number of tasks to be allowd
+//
+// 2. size: duration
+func NewSyncLimiter(limit uint64, size time.Duration) *SyncLimiter <span class="cov8" title="1">{
+        current := NewWindow(0, time.Unix(0, 0))
+        previous := NewWindow(0, time.Unix(0, 0))
+
+        return &amp;SyncLimiter{
+                previous: previous,
+                current:  current,
+                lock:     sync.Mutex{},
+                killed:   false,
+                size:     size,
+                limit:    limit,
+        }
+}</span>
 </pre>
 		
 		<pre class="file" id="file2" style="display: none">package ratelimiter
@@ -250,9 +503,10 @@ import (
         "time"
 )
 
+// Window represents the structure of timing-window at given point of time.
 type Window struct {
         count     uint64
-        startTime int64
+        startTime time.Time
 }
 
 func (w *Window) updateCount(n uint64) <span class="cov8" title="1">{
@@ -260,7 +514,7 @@ func (w *Window) updateCount(n uint64) <span class="cov8" title="1">{
 }</span>
 
 func (w *Window) getStartTime() time.Time <span class="cov8" title="1">{
-        return time.Unix(0, w.startTime)
+        return w.startTime
 }</span>
 
 func (w *Window) setStateFrom(other *Window) <span class="cov8" title="1">{
@@ -269,16 +523,27 @@ func (w *Window) setStateFrom(other *Window) <span class="cov8" title="1">{
 }</span>
 
 func (w *Window) resetToTime(startTime time.Time) <span class="cov8" title="1">{
-        nsTime := startTime.UnixNano()
         w.count = 0
-        w.startTime = nsTime
+        w.startTime = startTime
 }</span>
 
+func (w *Window) setToState(startTime time.Time, count uint64) <span class="cov8" title="1">{
+        w.startTime = startTime
+        w.count = count
+}</span>
+
+// Creates and returns a pointer to the new Window instance.
+//
+// Parameters:
+//
+// 1. count: The initial count of the window.
+//
+// 2. startTime: The initial starting time of the window.
 func NewWindow(count uint64, startTime time.Time) *Window <span class="cov8" title="1">{
-        nsTime := startTime.UnixNano()
+
         return &amp;Window{
                 count:     count,
-                startTime: int64(nsTime),
+                startTime: startTime,
         }
 }</span>
 </pre>

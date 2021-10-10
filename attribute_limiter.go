@@ -138,7 +138,14 @@ func (a *AttributeBasedLimiter) MustShouldAllow(key string, n uint64, limit uint
 	}
 
 	err := a.createNewKey(key, limit, size)
-	return err == nil
+	if err != nil {
+		return err == nil
+	}
+
+	// check ratelimiter on newly created key:
+	limiter := a.attributeMap[key]
+	allowed, err := limiter.ShouldAllow(n)
+	return allowed && err == nil
 }
 
 // DeleteKey remove the key and kill its underlying limiter.
