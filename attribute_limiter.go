@@ -125,6 +125,10 @@ func (a *AttributeBasedLimiter) ShouldAllow(key string, n uint64) (bool, error) 
 // n: number of tasks to be processed, set this as 1 for a single task.
 // (Example: An HTTP request)
 //
+// limit: The number of tasks to be allowd
+//
+// size: duration
+//
 // Returns bool.
 // (false) when limiter is inactive (or it is killed) or n tasks can be not allowed.
 // (true) when n tasks can be allowed or new key-limiter.
