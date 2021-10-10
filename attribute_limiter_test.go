@@ -18,6 +18,7 @@ func TestAttributeMapGetSetDelete(t *testing.T) {
 	// Example scenario, the rate-limiter
 	testKey1 := "/api/getArticle?id=10"
 	testKey2 := "/api/getArticle?id=20"
+	testKey3 := "/api/getArticle?id=30"
 
 	// check keys:
 	if attributeLimiter.HasKey(testKey1) {
@@ -53,6 +54,22 @@ func TestAttributeMapGetSetDelete(t *testing.T) {
 	if err := attributeLimiter.CreateNewKey(testKey2, uint64(limit), duration); err == nil {
 		t.Fatalf(
 			"AttributeBasedLimiter.CreateNewKey() failed, did not return error when creating existing key %s\n",
+			testKey2,
+		)
+	}
+
+	// create key:
+	if ok := attributeLimiter.HasOrCreateKey(testKey3, uint64(limit), duration); !ok {
+		t.Fatalf(
+			"AttributeBasedLimiter.HasOrCreateKey() failed, returned false on creating key %s",
+			testKey3,
+		)
+	}
+
+	// create an already existing key:
+	if ok := attributeLimiter.HasOrCreateKey(testKey2, uint64(limit), duration); !ok {
+		t.Fatalf(
+			"AttributeBasedLimiter.HasOrCreateKey() failed, returned false for existing key %s",
 			testKey2,
 		)
 	}
@@ -106,6 +123,27 @@ func TestAttributeMapGetSetDelete(t *testing.T) {
 	if _, err := attributeLimiter.ShouldAllow("noKey", 5); err == nil {
 		t.Fatalf(
 			"AttributeBasedLimiter.ShouldAllow() failed, did not return error when checking non-existing key.",
+		)
+	}
+
+	// check ShouldAllow on non-existing key:
+	if ok := attributeLimiter.MustShouldAllow("newKey", 5, uint64(limit), duration); !ok {
+		t.Fatalf(
+			"AttributeBasedLimiter.MustShouldAllow() failed, did not return false when checking non-existing key.",
+		)
+	}
+
+	// check ShouldAllow on existing key:
+	if _, err := attributeLimiter.ShouldAllow("newKey", 5); err != nil {
+		t.Fatalf(
+			"AttributeBasedLimiter.ShouldAllow() failed, did not return error when checking existing key.",
+		)
+	}
+
+	// check ShouldAllow on existing key:
+	if ok := attributeLimiter.MustShouldAllow("newKey", 5, uint64(limit), duration); !ok {
+		t.Fatalf(
+			"AttributeBasedLimiter.MustShouldAllow() failed, did not return false when checking non-existing key.",
 		)
 	}
 

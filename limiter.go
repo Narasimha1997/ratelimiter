@@ -25,7 +25,7 @@ type DefaultLimiter struct {
 	cancelFn      func()
 }
 
-// Makes decison whether n tasks can be allowed or not.
+// ShouldAllow makes decison whether n tasks can be allowed or not.
 //
 // Parameters:
 //
@@ -34,12 +34,15 @@ type DefaultLimiter struct {
 // Returns (bool, error). (false, error) if limiter is inactive (or it is killed). Otherwise,
 // (true/false, nil) depending on whether n tasks can be allowed or not.
 func (l *DefaultLimiter) ShouldAllow(n uint64) (bool, error) {
-
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
 	if l.killed {
 		return false, fmt.Errorf("function ShouldAllow called on an inactive instance")
+	}
+
+	if l.limit == 0 || l.size < time.Millisecond {
+		return false, fmt.Errorf("invalid limiter configuration")
 	}
 
 	currentTime := time.Now()
@@ -77,7 +80,6 @@ func (l *DefaultLimiter) progressiveWindowSlider() {
 
 // Kill the limiter, returns error if the limiter has been killed already.
 func (l *DefaultLimiter) Kill() error {
-
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
@@ -90,7 +92,7 @@ func (l *DefaultLimiter) Kill() error {
 	return nil
 }
 
-// Creates an instance of DefaultLimiter and returns it's pointer.
+// NewDefaultLimiter creates an instance of DefaultLimiter and returns it's pointer.
 //
 // Parameters:
 //
@@ -135,7 +137,7 @@ func (s *SyncLimiter) getNSlidesSince(now time.Time) (time.Duration, time.Time) 
 	return timeSinceStart / s.size, sizeAlignedTime
 }
 
-// Makes decison whether n tasks can be allowed or not.
+// ShouldAllow makes decison whether n tasks can be allowed or not.
 //
 // Parameters:
 //
@@ -149,6 +151,10 @@ func (s *SyncLimiter) ShouldAllow(n uint64) (bool, error) {
 
 	if s.killed {
 		return false, fmt.Errorf("function ShouldAllow called on an inactive instance")
+	}
+
+	if s.limit == 0 || s.size < time.Millisecond {
+		return false, fmt.Errorf("invalid limiter configuration")
 	}
 
 	currentTime := time.Now()
@@ -206,7 +212,7 @@ func (s *SyncLimiter) Kill() error {
 	return nil
 }
 
-// Creates an instance of SyncLimiter and returns it's pointer.
+// NewSyncLimiter creates an instance of SyncLimiter and returns it's pointer.
 //
 // Parameters:
 //
@@ -214,7 +220,6 @@ func (s *SyncLimiter) Kill() error {
 //
 // 2. size: duration
 func NewSyncLimiter(limit uint64, size time.Duration) *SyncLimiter {
-
 	current := NewWindow(0, time.Unix(0, 0))
 	previous := NewWindow(0, time.Unix(0, 0))
 
