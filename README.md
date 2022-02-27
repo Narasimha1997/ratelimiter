@@ -10,7 +10,7 @@ The implementation of rate-limiter algorithm is based on Scalable Distributed Ra
 This library can be used in your codebase to rate-limit literally anything. For example, you can integrate this library to provide rate-limiting for your REST/gRPC APIs or you can use this library to 
 rate-limit the number of go-routines spawned or number of tasks submitted to a function/module per given time interval. This library provides generic rate check APIs that can be used anywhere. The library is built with concurrency in mind from the groud up, the rate-limiter can be used across go-routines without having to worry about synchronization issues. This library also provides capability to create and manage multiple rate-limiters with different configurations assiociated with unique keys.
 
-### How is this different from Go's offical rate package?
+### How is this different from Go's official rate package?
 The official Go [package](https://pkg.go.dev/golang.org/x/time/rate ) provides a rate limiter implementation which uses [Token Bucket Algorithm](https://en.wikipedia.org/wiki/Token_bucket). This repository (i.e the current repository) implements rate limiting functionalities using [Sliding Window Rate Limiting Algorithm](https://konghq.com/blog/how-to-design-a-scalable-rate-limiting-algorithm/) as used in Kong API gateway. Both of these libraries provide the same functionality, but there are trade-offs between these two algorithms, [this blog](https://konghq.com/blog/how-to-design-a-scalable-rate-limiting-algorithm/) properly explains these trade-offs. Understand the trade-offs and match them with your requirements to decide which algorithm to use.
 
 ### Installation:
