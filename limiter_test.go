@@ -307,3 +307,51 @@ func TestSyncLimiterCleanup(t *testing.T) {
 		t.Fatalf("Calling ShouldAllow() on inactive limiter did not throw any errors.")
 	}
 }
+
+func BenchmarkDefaultLimiter(b *testing.B) {
+	limiter := NewDefaultLimiter(100, 1*time.Second)
+
+	for i := 0; i < b.N; i++ {
+		_, err := limiter.ShouldAllow(1)
+		if err != nil {
+			b.Fatalf("Error when calling ShouldAllow() on active limiter, Error: %v", err)
+		}
+	}
+}
+
+func BenchmarkSyncLimiter(b *testing.B) {
+	limiter := NewSyncLimiter(100, 1*time.Second)
+
+	for i := 0; i < b.N; i++ {
+		_, err := limiter.ShouldAllow(1)
+		if err != nil {
+			b.Fatalf("Error when calling ShouldAllow() on active limiter, Error: %v", err)
+		}
+	}
+}
+
+func BenchmarkConcurrentDefaultLimiter(b *testing.B) {
+	limiter := NewDefaultLimiter(100, 1*time.Second)
+
+	b.RunParallel(func(p *testing.PB) {
+		for p.Next() {
+			_, err := limiter.ShouldAllow(1)
+			if err != nil {
+				b.Fatalf("Error when calling ShouldAllow() on active limiter, Error: %v", err)
+			}
+		}
+	})
+}
+
+func BenchmarkConcurrentSyncLimiter(b *testing.B) {
+	limiter := NewSyncLimiter(100, 1*time.Second)
+
+	b.RunParallel(func(p *testing.PB) {
+		for p.Next() {
+			_, err := limiter.ShouldAllow(1)
+			if err != nil {
+				b.Fatalf("Error when calling ShouldAllow() on active limiter, Error: %v", err)
+			}
+		}
+	})
+}

@@ -440,6 +440,26 @@ go tool cover -html=c.out -o coverage.html
 
 This will generate a file called `coverage.html`. The `coverage.html` is provided in the repo which is pre-generated.
 
+**Benchmarks**:
+Benchmarks can be executed by running:
+```
+go test -bench=.
+```
+
+Current benchmarks are as follows:
+```
+goos: linux
+goarch: amd64
+pkg: github.com/Narasimha1997/ratelimiter
+cpu: Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz
+BenchmarkDefaultLimiter-12                      11732958                85.61 ns/op
+BenchmarkSyncLimiter-12                          7047988               175.9 ns/op
+BenchmarkConcurrentDefaultLimiter-12             7017625               163.9 ns/op
+BenchmarkConcurrentSyncLimiter-12                4132976               256.3 ns/op
+PASS
+ok      github.com/Narasimha1997/ratelimiter    46.408s
+```
+
 #### Notes on test:
 The testing code produces 500 requests/sec with `2ms` precision time gap between each request. The accuracy of this `2ms` time tick generation can differ from platform to platform, even a small difference of 500 micorseconds can add up together and give more time for test to run in the end because of clock drift, as a result the error offset +/- 3 might not always work.
 ### Contributing
